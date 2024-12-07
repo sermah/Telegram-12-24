@@ -24,7 +24,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Insets;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Outline;
@@ -57,7 +56,6 @@ import android.text.style.ClickableSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.ImageSpan;
 import android.text.style.URLSpan;
-import android.util.Log;
 import android.util.Pair;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
@@ -115,6 +113,7 @@ import org.telegram.ui.ActionBar.SimpleTextView;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.AvatarSpan;
 import org.telegram.ui.Cells.ChatMessageCell;
+import org.telegram.ui.Cells.PhotoAttachCameraCell;
 import org.telegram.ui.Cells.ShareDialogCell;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.BackupImageView;
@@ -361,6 +360,31 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             src.iconDrawable = floatingButton.getContext().getResources().getDrawable(R.drawable.story_camera).mutate();
             src.iconSize = AndroidUtilities.dp(56);
             src.rounding = Math.max(src.screenRect.width(), src.screenRect.height()) / 2f;
+            return src;
+        }
+        public static SourceView fromPhotoAttachCameraCell(PhotoAttachCameraCell attachCell) {
+            if (attachCell == null) {
+                return null;
+            }
+            SourceView src = new SourceView() {
+                @Override
+                protected void show(boolean sent) {
+                    attachCell.setVisibility(View.VISIBLE);
+                }
+                @Override
+                protected void hide() {
+                    attachCell.post(() -> {
+                        attachCell.setVisibility(View.GONE);
+                    });
+                }
+            };
+            int[] loc = new int[2];
+            attachCell.getLocationOnScreen(loc);
+            attachCell.updateBitmap();
+            src.screenRect.set(loc[0], loc[1], loc[0] + attachCell.getWidth(), loc[1] + attachCell.getHeight());
+//            src.backgroundDrawable = attachCell.getDrawable();
+            src.iconDrawable = attachCell.getImageView().getDrawable().mutate();
+            src.iconSize = AndroidUtilities.dp(34);
             return src;
         }
 
