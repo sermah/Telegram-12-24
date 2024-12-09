@@ -103,6 +103,7 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.VideoEditedInfo;
+import org.telegram.messenger.VideoEncodingService;
 import org.telegram.messenger.camera.CameraController;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
@@ -187,6 +188,12 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     private ClosingViewProvider closingSourceProvider;
     private Runnable closeListener;
 
+    private ChatAttachListener attachListener;
+    private MessageObject attachMessageObject;
+    private long attachDuration;
+    private CharSequence attachCaption;
+    private File attachFile;
+
     public static StoryRecorder getInstance(Activity activity, int currentAccount) {
         if (instance != null && (instance.activity != activity || instance.currentAccount != currentAccount)) {
             instance.close(false);
@@ -203,6 +210,12 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             instance.close(false);
         }
         instance = null;
+    }
+
+    public abstract static class ChatAttachListener {
+        protected abstract void onPhoto(String path, int orientation, int width, int height, CharSequence caption);
+        protected abstract void onVideo(String path, int duration, int width, int height, CharSequence caption);
+        protected abstract void onFail(boolean isVideo);
     }
 
     public static boolean isVisible() {
@@ -468,6 +481,11 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         return this;
     }
 
+    public StoryRecorder setChatAttachListener(ChatAttachListener listener) {
+        attachListener = listener;
+        return this;
+    }
+
     public StoryRecorder closeToWhenSent(ClosingViewProvider closingSourceProvider) {
         this.closingSourceProvider = closingSourceProvider;
         return this;
@@ -615,9 +633,16 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
         addNotificationObservers();
 
+        isChatAttach = false;
         botId = 0;
         botLang = "";
         botEdit = null;
+    }
+
+    public void openChatAttachment(SourceView sourceView, boolean animated) {
+        this.isChatAttach = true;
+        open(sourceView, animated);
+        this.isChatAttach = true;
     }
 
     public void openEdit(SourceView sourceView, StoryEntry entry, long time, boolean animated) {
@@ -675,6 +700,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
         addNotificationObservers();
 
+        isChatAttach = false;
         botId = 0;
         botLang = "";
         botEdit = null;
@@ -735,6 +761,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
         addNotificationObservers();
 
+        isChatAttach = false;
         botId = 0;
         botLang = "";
         botEdit = null;
@@ -802,6 +829,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
         addNotificationObservers();
 
+        isChatAttach = false;
         botId = 0;
         botLang = "";
         botEdit = null;
@@ -1852,6 +1880,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     private PreviewView.TextureViewHolder videoTextureHolder;
     private View captionEditOverlay;
 
+    private boolean isChatAttach;
     private boolean isReposting;
     private long botId;
     private String botLang;
@@ -2939,6 +2968,44 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         updateActionBarButtonsOffsets();
     }
 
+    private void buildAndSendChatAttach(StoryEntry entry) {
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.filePreparingFailed);
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.fileNewChunkAvailable);
+        if (entry.wouldBeVideo()) {
+            TLRPC.TL_message message = new TLRPC.TL_message();
+            message.id = 1;
+            String path = message.attachPath = StoryEntry.makeCacheFile(currentAccount, true).getAbsolutePath();
+            attachMessageObject = new MessageObject(currentAccount, message, (MessageObject) null, false, false);
+            entry.getVideoEditedInfo(info -> {
+                attachMessageObject.videoEditedInfo = info;
+                attachDuration = info.estimatedDuration / 1000L;
+                attachCaption = entry.caption;
+                if (attachMessageObject.videoEditedInfo.needConvert()) {
+                    MediaController.getInstance().scheduleVideoConvert(attachMessageObject, false, false, false);
+                } else {
+                    attachFile = new File(info.originalPath);
+                    boolean rename = attachFile.renameTo(new File(path));
+                    if (rename) {
+                        attachListener.onVideo(path, (int) attachDuration, info.originalWidth, info.originalHeight, entry.caption);
+                    } else {
+                        attachListener.onFail(true);
+                    }
+                    attachListener = null;
+                }
+            });
+        } else {
+            final File destFile = StoryEntry.makeCacheFile(currentAccount, false);
+            String path = destFile.getAbsolutePath();
+            Utilities.themeQueue.postRunnable(() -> {
+                entry.buildPhoto(destFile);
+                AndroidUtilities.runOnUIThread(() -> {
+                    attachListener.onPhoto(path, entry.orientation, entry.width, entry.height, entry.caption);
+                    attachListener = null;
+                });
+            });
+        }
+    }
+
     private void processDone() {
         if (privacySheet != null) {
             privacySheet.dismiss();
@@ -2975,7 +3042,9 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 return;
             }
         }
-        if (outputEntry.isEdit || outputEntry.botId != 0) {
+        if (outputEntry.isChatAttach) {
+            sendChatAttach();
+        } else if (outputEntry.isEdit || outputEntry.botId != 0) {
             outputEntry.editedPrivacy = false;
             applyFilter(null);
             upload(true);
@@ -3123,6 +3192,54 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             preparingUpload = false;
             uploadInternal(asStory);
         });
+    }
+
+    private void sendChatAttach() {
+        if (preparingUpload) {
+            return;
+        }
+        preparingUpload = true;
+        applyPaintInBackground(() -> {
+            applyPaintMessage();
+            preparingUpload = false;
+            sendChatAttachInternal();
+        });
+    }
+
+    private void sendChatAttachInternal() {
+        if (outputEntry == null) {
+            close(true);
+            return;
+        }
+        destroyPhotoFilterView();
+        prepareThumb(outputEntry, false);
+        outputEntry.caption = new SpannableString(captionEdit.getText());
+        if (attachListener != null) {
+            buildAndSendChatAttach(outputEntry);
+        }
+        outputEntry.cancelCheckStickers();
+
+        outputEntry = null;
+
+        wasSend = true;
+        forceBackgroundVisible = true;
+        checkBackgroundVisibility();
+
+        Runnable runnable = () -> {
+            if (fromSourceView != null) {
+                fromSourceView.show(true);
+                fromSourceView = null;
+            }
+            if (closeListener != null) {
+                closeListener.run();
+                closeListener = null;
+            }
+            fromSourceView = null;
+            closingSourceProvider = null;
+            close(true);
+        };
+        runnable.run();
+
     }
 
     private void uploadInternal(boolean asStory) {
@@ -3430,6 +3547,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                     }
                     StoryEntry entry = StoryEntry.fromPhotoShoot(outputFile, rotate);
                     if (entry != null) {
+                        entry.isChatAttach = isChatAttach;
                         entry.botId = botId;
                         entry.botLang = botLang;
                     }
@@ -3467,6 +3585,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             } else {
                 takingPhoto = false;
                 final StoryEntry entry = StoryEntry.fromPhotoShoot(outputFile, 0);
+                entry.isChatAttach = isChatAttach;
                 entry.botId = botId;
                 entry.botLang = botLang;
                 if (collageLayoutView.hasLayout()) {
@@ -3577,6 +3696,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 showVideoTimer(false, true);
 
                 StoryEntry entry = StoryEntry.fromVideoShoot(outputFile, thumbPath, duration);
+                entry.isChatAttach = isChatAttach;
                 entry.botId = botId;
                 entry.botLang = botLang;
                 animateRecording(false, true);
@@ -4253,6 +4373,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                     isVideo = photoEntry.isVideo;
                     storyEntry = StoryEntry.fromPhotoEntry(photoEntry);
                     storyEntry.blurredVideoThumb = blurredBitmap;
+                    storyEntry.isChatAttach = isChatAttach;
                     storyEntry.botId = botId;
                     storyEntry.botLang = botLang;
                     storyEntry.setupMatrix();
@@ -4281,6 +4402,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                         MessagesController.getInstance(currentAccount).getStoriesController().getDraftsController().delete(storyEntry);
                         return;
                     }
+                    storyEntry.isChatAttach = isChatAttach;
                     storyEntry.botId = botId;
                     storyEntry.botLang = botLang;
                     storyEntry.setupMatrix();
@@ -4483,8 +4605,9 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             captionContainer.clearFocus();
 
 //            privacySelector.setStoryPeriod(outputEntry == null || !UserConfig.getInstance(currentAccount).isPremium() ? 86400 : outputEntry.period);
+            captionEdit.setChatAttach(isChatAttach);
             captionEdit.setPeriod(outputEntry == null ? 86400 : outputEntry.period, false);
-            captionEdit.setPeriodVisible(!MessagesController.getInstance(currentAccount).premiumFeaturesBlocked() && (outputEntry == null || !outputEntry.isEdit));
+            captionEdit.setPeriodVisible(!MessagesController.getInstance(currentAccount).premiumFeaturesBlocked() && (outputEntry == null || !outputEntry.isEdit) && !isChatAttach);
             captionEdit.setHasRoundVideo(outputEntry != null && outputEntry.round != null);
             setReply();
             timelineView.setOpen(outputEntry == null || !outputEntry.isCollage() || !outputEntry.hasVideo(), false);
@@ -4495,7 +4618,6 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             if (outputEntry != null && outputEntry.isEditingCover) {
                 titleTextView.setText(getString(R.string.RecorderEditCover));
             }
-            captionContainer.setVisibility(View.VISIBLE);
             coverButton.setVisibility(View.VISIBLE);
         }
         if (toPage == PAGE_COVER) {
@@ -4503,9 +4625,10 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         }
         if (toPage == PAGE_PREVIEW) {
             videoError = false;
+            final boolean isChat = outputEntry != null && outputEntry.isChatAttach;
             final boolean isBot = outputEntry != null && outputEntry.botId != 0;
             final boolean isEdit = outputEntry != null && outputEntry.isEdit;
-            previewButtons.setShareText(getString(isEdit ? R.string.Done : isBot ? R.string.UploadBotPreview : R.string.Next), !isBot);
+            previewButtons.setShareText(getString(isEdit ? R.string.Done : isBot ? R.string.UploadBotPreview : isChat ? R.string.Send : R.string.Next), !isBot);
             coverTimelineView.setVisibility(View.GONE);
             coverButton.setVisibility(View.GONE);
 //            privacySelector.set(outputEntry, false);
@@ -4553,6 +4676,8 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             titleTextView.setTranslationX(0);
             if (outputEntry != null && outputEntry.botId != 0) {
                 titleTextView.setText("");
+            } else if (outputEntry != null && outputEntry.isChatAttach) {
+                titleTextView.setText(getString(R.string.Send));
             } else if (outputEntry != null && outputEntry.isEdit) {
                 titleTextView.setText(getString(R.string.RecorderEditStory));
             } else if (outputEntry != null && outputEntry.isRepostMessage) {
@@ -6435,6 +6560,26 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 if (storyLimit != null && storyLimit.active(currentAccount) && (outputEntry == null || outputEntry.botId == 0)) {
                     showLimitReachedSheet(storyLimit, true);
                 }
+            }
+        } else if (id == NotificationCenter.fileNewChunkAvailable) {
+            if (args[0] == attachMessageObject) {
+                String finalPath = (String) args[1];
+                long finalSize = (Long) args[3];
+
+                if (finalSize > 0) {
+                    attachListener.onVideo(finalPath, (int) attachDuration, attachMessageObject.videoEditedInfo.resultWidth, attachMessageObject.videoEditedInfo.resultHeight, attachCaption);
+                    attachListener = null;
+                }
+            }
+        } else if (id == NotificationCenter.filePreparingFailed) {
+            if (args[0] == attachMessageObject) {
+                attachListener.onFail(true);
+                attachListener = null;
+                try {
+                    if (attachFile != null) {
+                        attachFile.delete();
+                    }
+                } catch (Exception ignore) {}
             }
         }
     }

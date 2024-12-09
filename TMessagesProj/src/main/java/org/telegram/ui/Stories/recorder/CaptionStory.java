@@ -60,6 +60,8 @@ public class CaptionStory extends CaptionContainerView {
     private ItemOptions periodPopup;
     private boolean periodVisible = true;
 
+    private boolean isChatAttach = false;
+
     public static final int[] periods = new int[] { 6 * 3600, 12 * 3600, 86400, 2 * 86400 };
     private int periodIndex = 0;
 
@@ -125,6 +127,16 @@ public class CaptionStory extends CaptionContainerView {
             }
             periodPopup.setDimAlpha(0).show();
         });
+    }
+
+    public void setChatAttach(boolean value) {
+        isChatAttach = value;
+
+        if (isChatAttach) {
+            periodButton.setVisibility(GONE);
+        } else {
+            periodButton.setVisibility(VISIBLE);
+        }
     }
 
     private void checkFlipButton() {
@@ -468,7 +480,7 @@ public class CaptionStory extends CaptionContainerView {
     }
 
     public void setPeriodVisible(boolean visible) {
-        periodVisible = visible;
+        periodVisible = visible && !isChatAttach;
         periodButton.setVisibility(periodVisible && !keyboardShown ? View.VISIBLE : View.GONE);
     }
 

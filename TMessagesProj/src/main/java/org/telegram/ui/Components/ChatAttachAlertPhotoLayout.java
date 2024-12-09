@@ -58,7 +58,6 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.Keep;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -2414,14 +2413,44 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         StoryRecorder recorder = StoryRecorder
                 .getInstance(AndroidUtilities.findActivity(getContext()), currentAccount)
                 .canChangePeer(false);
+        recorder.setChatAttachListener(new StoryRecorder.ChatAttachListener() {
+            @Override
+            protected void onPhoto(String path, int orientation, int width, int height, CharSequence caption) {
+                MediaController.PhotoEntry photoEntry = new MediaController.PhotoEntry(0, lastImageId--, 0, path, orientation, false, width, height, 0);
+                photoEntry.caption = caption;
+                postEntry(photoEntry);
+            }
+
+            @Override
+            protected void onVideo(String path, int duration, int width, int height, CharSequence caption) {
+                MediaController.PhotoEntry photoEntry = new MediaController.PhotoEntry(0, lastImageId--, 0, path, duration, true, width, height, 0);
+                photoEntry.caption = caption;
+                postEntry(photoEntry);
+            }
+
+            @Override
+            protected void onFail(boolean isVideo) {
+
+            }
+
+            private void postEntry(MediaController.PhotoEntry photoEntry) {
+                photoEntry.canDeleteAfter = true;
+                selectedPhotos.put(photoEntry.imageId, photoEntry);
+                selectedPhotosOrder.add(photoEntry.imageId);
+
+                parentAlert.delegate.didPressedButton(7, false, true, 0, 0, parentAlert.isCaptionAbove(), false);
+            }
+        });
         recorder.setOnPrepareCloseListener((t, close, sent, did) -> {
-            // if sent - close to attachments icon
-            // if not - close to photoattach cell
             closeCamera(false);
             AndroidUtilities.runOnUIThread(close);
+            parentAlert.dismiss(true);
         });
         recorder.setOnCloseListener(this::showCamera);
-        recorder.open(StoryRecorder.SourceView.fromPhotoAttachCameraCell(cameraCell), true);
+        recorder.openChatAttachment(
+                StoryRecorder.SourceView.fromPhotoAttachCameraCell(cameraCell),
+                true
+        );
     }
 
     public void loadGalleryPhotos() {

@@ -153,6 +153,7 @@ public class StoryEntry {
     public int period = 86400;
 
     public long botId;
+    public boolean isChatAttach;
     public String botLang = "";
     public TLRPC.InputMedia editingBotPreview;
 
@@ -1544,6 +1545,7 @@ public class StoryEntry {
         newEntry.roundVolume = roundVolume;
         newEntry.isEditingCover = isEditingCover;
         newEntry.botId = botId;
+        newEntry.isChatAttach = isChatAttach;
         newEntry.botLang = botLang;
         newEntry.editingBotPreview = editingBotPreview;
         newEntry.cover = cover;
