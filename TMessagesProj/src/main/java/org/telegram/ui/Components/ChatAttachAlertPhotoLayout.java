@@ -2297,13 +2297,6 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         if (cameraView == null || cameraInitAnimation != null || parentAlert.isDismissed()) {
             return;
         }
-//        Toast.makeText(getContext(), "HIIII", Toast.LENGTH_SHORT).show();
-//        cameraView.initTexture();
-//        if (shouldLoadAllMedia()) {
-//            tooltipTextView.setVisibility(VISIBLE);
-//        } else {
-//            tooltipTextView.setVisibility(GONE);
-//        }
         if (cameraPhotos.isEmpty()) {
 //            counterTextView.setVisibility(View.INVISIBLE);
 //            cameraPhotoRecyclerView.setVisibility(View.GONE);
@@ -2314,85 +2307,12 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         if (parentAlert.getCommentView().isKeyboardVisible() && isFocusable()) {
             parentAlert.getCommentView().closeKeyboard();
         }
-//        zoomControlView.setVisibility(View.VISIBLE);
-//        zoomControlView.setAlpha(0.0f);
-//        cameraPanel.setVisibility(View.VISIBLE);
-//        cameraPanel.setTag(null);
-//        animateCameraValues[0] = 0;
-//        animateCameraValues[1] = itemSize;
-//        animateCameraValues[2] = itemSize;
-//        additionCloseCameraY = 0;
-//        cameraExpanded = true;
-        if (cameraView != null) {
-//            cameraView.setFpsLimit(-1);
-        }
         AndroidUtilities.hideKeyboard(this);
         AndroidUtilities.setLightNavigationBar(parentAlert.getWindow(), false);
         parentAlert.getWindow().addFlags(FLAG_KEEP_SCREEN_ON);
-        if (false) {
-            if (animated) {
-                setCameraOpenProgress(0);
-                cameraAnimationInProgress = true;
-                notificationsLocker.lock();
-                ArrayList<Animator> animators = new ArrayList<>();
-                animators.add(ObjectAnimator.ofFloat(this, "cameraOpenProgress", 0.0f, 1.0f));
-                animators.add(ObjectAnimator.ofFloat(cameraPanel, View.ALPHA, 1.0f));
-                animators.add(ObjectAnimator.ofFloat(counterTextView, View.ALPHA, 1.0f));
-                animators.add(ObjectAnimator.ofFloat(cameraPhotoRecyclerView, View.ALPHA, 1.0f));
-                for (int a = 0; a < 2; a++) {
-                    if (flashModeButton[a].getVisibility() == View.VISIBLE) {
-                        animators.add(ObjectAnimator.ofFloat(flashModeButton[a], View.ALPHA, 1.0f));
-                        break;
-                    }
-                }
-                AnimatorSet animatorSet = new AnimatorSet();
-                animatorSet.playTogether(animators);
-                animatorSet.setDuration(350);
-                animatorSet.setInterpolator(CubicBezierInterpolator.DEFAULT);
-                animatorSet.addListener(new AnimatorListenerAdapter() {
-                    @Override
-                    public void onAnimationEnd(Animator animator) {
-                        notificationsLocker.unlock();
-                        cameraAnimationInProgress = false;
-                        if (cameraView != null) {
-                            if (Build.VERSION.SDK_INT >= 21) {
-                                cameraView.invalidateOutline();
-                            } else {
-                                cameraView.invalidate();
-                            }
-                        }
-                        if (cameraOpened) {
-                            parentAlert.delegate.onCameraOpened();
-                        }
-                        if (Build.VERSION.SDK_INT >= 21 && cameraView != null) {
-                            cameraView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_FULLSCREEN);
-                        }
-                    }
-                });
-                animatorSet.start();
-            } else {
-                setCameraOpenProgress(1.0f);
-                cameraPanel.setAlpha(1.0f);
-                counterTextView.setAlpha(1.0f);
-                cameraPhotoRecyclerView.setAlpha(1.0f);
-                for (int a = 0; a < 2; a++) {
-                    if (flashModeButton[a].getVisibility() == View.VISIBLE) {
-                        flashModeButton[a].setAlpha(1.0f);
-                        break;
-                    }
-                }
-                parentAlert.delegate.onCameraOpened();
-                if (cameraView != null && Build.VERSION.SDK_INT >= 21) {
-                    cameraView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_FULLSCREEN);
-                }
-            }
-        }
 
-//        saveLastCameraBitmap();
+        hideCamera(false, () -> openStoryRecorder(animated));
 
-        hideCamera(false, this::openStoryRecorder);
-
-//        cameraOpened = true;
         parentAlert.delegate.onCameraOpened();
         if (cameraView != null) {
             cameraView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -2409,7 +2329,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
 //        }
     }
 
-    public void openStoryRecorder() {
+    public void openStoryRecorder(boolean animated) {
         StoryRecorder recorder = StoryRecorder
                 .getInstance(AndroidUtilities.findActivity(getContext()), currentAccount)
                 .canChangePeer(false);
@@ -2447,9 +2367,24 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
             parentAlert.dismiss(true);
         });
         recorder.setOnCloseListener(this::showCamera);
+
+        if (parentAlert.isPhotoPicker && parentAlert.isStickerMode) {
+            recorder.setEnableVideo(false);
+            recorder.setEnableCaption(false);
+        } else if (parentAlert.avatarPicker != 0) {
+            recorder.setEnableVideo(true);
+            recorder.setEnableCaption(false);
+        } else if (parentAlert.baseFragment instanceof ChatActivity) {
+            recorder.setEnableVideo(true);
+            recorder.setEnableCaption(true);
+        } else {
+            recorder.setEnableVideo(!parentAlert.isPhotoPicker);
+            recorder.setEnableCaption(parentAlert.allowEnterCaption);
+        }
+
         recorder.openChatAttachment(
                 StoryRecorder.SourceView.fromPhotoAttachCameraCell(cameraCell),
-                true
+                animated
         );
     }
 

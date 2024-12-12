@@ -39,6 +39,8 @@ public class PhotoVideoSwitcherView extends View implements FlashViews.Invertabl
     private boolean mIsScrolling, mIsTouch;
     private ValueAnimator animator;
 
+    private boolean enableVideo;
+
     public PhotoVideoSwitcherView(Context context) {
         super(context);
 
@@ -70,6 +72,7 @@ public class PhotoVideoSwitcherView extends View implements FlashViews.Invertabl
         scrollWidth = dp(32) + photoTextWidth / 2 + videoTextWidth / 2;
 
         mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        enableVideo = true;
     }
 
     private float mode;
@@ -120,13 +123,15 @@ public class PhotoVideoSwitcherView extends View implements FlashViews.Invertabl
             float overscrollFactor = 0.2f;
             if (mode <= 0 && dx < 0) {
                 dx *= overscrollFactor;
+            } else if (!enableVideo && mode >= 0 && dx > 0) {
+                dx *= overscrollFactor;
             } else if (mode >= 1 && dx > 0) {
                 dx *= overscrollFactor;
             }
             mode += dx / scrollWidth / 2.5f;
-            mode = Utilities.clamp(mode, 1 + overscrollFactor, -overscrollFactor);
+            mode = Utilities.clamp(mode, (enableVideo ? 1 : 0) + overscrollFactor, -overscrollFactor);
             if (onSwitchingModeListener != null) {
-                onSwitchingModeListener.run(Utilities.clamp(mode, 1, 0));
+                onSwitchingModeListener.run(Utilities.clamp(mode, enableVideo ? 1 : 0, 0));
             }
             invalidate();
         }
@@ -174,14 +179,23 @@ public class PhotoVideoSwitcherView extends View implements FlashViews.Invertabl
         photoText.draw(canvas);
         canvas.restore();
 
-        canvas.save();
-        canvas.translate(x + dp(4 + 12) - videoTextLeft, cy - videoTextHeight / 2f + oy);
-        videoText.draw(canvas);
-        canvas.restore();
+        if (enableVideo) {
+            canvas.save();
+            canvas.translate(x + dp(4 + 12) - videoTextLeft, cy - videoTextHeight / 2f + oy);
+            videoText.draw(canvas);
+            canvas.restore();
+        }
     }
 
     protected boolean allowTouch() {
         return true;
+    }
+
+    public void setEnableVideo(boolean enable) {
+        enableVideo = enable;
+        if (!enable) {
+            switchMode(false);
+        }
     }
 
     @Override

@@ -103,7 +103,6 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.VideoEditedInfo;
-import org.telegram.messenger.VideoEncodingService;
 import org.telegram.messenger.camera.CameraController;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
@@ -194,6 +193,9 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     private CharSequence attachCaption;
     private File attachFile;
 
+    private boolean enableVideo;
+    private boolean enableCaption;
+
     public static StoryRecorder getInstance(Activity activity, int currentAccount) {
         if (instance != null && (instance.activity != activity || instance.currentAccount != currentAccount)) {
             instance.close(false);
@@ -245,6 +247,8 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         windowLayoutParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
 
         windowManager = (WindowManager) activity.getSystemService(Context.WINDOW_SERVICE);
+        enableVideo = true;
+        enableCaption = true;
 
         initViews();
     }
@@ -1060,6 +1064,18 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     private Utilities.Callback4<Long, Runnable, Boolean, Long> onClosePrepareListener;
     public void setOnPrepareCloseListener(Utilities.Callback4<Long, Runnable, Boolean, Long> listener) {
         onClosePrepareListener = listener;
+    }
+
+    public void setEnableVideo(boolean enable) {
+        enableVideo = enable;
+
+        modeSwitcherView.setEnableVideo(enableVideo);
+    }
+
+    public void setEnableCaption(boolean enable) {
+        enableCaption = enable;
+
+        captionEdit.setVisibility(!enableCaption || isBot() ? View.GONE : View.VISIBLE);
     }
 
     private int previewW, previewH;
@@ -2875,13 +2891,15 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 return;
             }
 
-            isVideo = newIsVideo;
+            isVideo = enableVideo && newIsVideo;
             showVideoTimer(isVideo && !collageListView.isVisible(), true);
             modeSwitcherView.switchMode(isVideo);
             recordControl.startAsVideo(isVideo);
         });
         modeSwitcherView.setOnSwitchingModeListener(t -> {
-            recordControl.startAsVideoT(t);
+            if (enableVideo) {
+                recordControl.startAsVideoT(t);
+            }
         });
         navbarContainer.addView(modeSwitcherView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL));
         flashViews.add(modeSwitcherView);
@@ -4545,6 +4563,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             if (recordControl != null) {
                 recordControl.stopRecordingLoading(false);
             }
+            modeSwitcherView.setEnableVideo(enableVideo);
             modeSwitcherView.setVisibility(View.VISIBLE);
             zoomControlView.setVisibility(View.VISIBLE);
             zoomControlView.setAlpha(0);
@@ -4597,7 +4616,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 //            privacySelector.setVisibility(View.VISIBLE);
             previewButtons.setVisibility(View.VISIBLE);
             previewView.setVisibility(View.VISIBLE);
-            captionEdit.setVisibility(isBot() ? View.GONE : View.VISIBLE);
+            captionEdit.setVisibility(!enableCaption || isBot() ? View.GONE : View.VISIBLE);
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) videoTimelineContainerView.getLayoutParams();
             lp.bottomMargin = isBot() ? dp(12) : dp(68);
             videoTimelineContainerView.setLayoutParams(lp);
@@ -4830,7 +4849,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             videoTimeView.setVisibility(outputEntry != null && outputEntry.duration >= 30_000 ? View.VISIBLE : View.GONE);
             captionContainer.setAlpha(1f);
             captionContainer.setTranslationY(0);
-            captionEdit.setVisibility(outputEntry != null && outputEntry.botId != 0 ? View.GONE : View.VISIBLE);
+            captionEdit.setVisibility(!enableCaption || outputEntry != null && outputEntry.botId != 0 ? View.GONE : View.VISIBLE);
         }
         if (toPage == PAGE_CAMERA && showSavedDraftHint) {
             getDraftSavedHint().setVisibility(View.VISIBLE);
