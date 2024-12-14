@@ -6262,7 +6262,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext(), resourcesProvider);
         builder.setTitle(getString(R.string.DiscardChanges));
         builder.setMessage(getString(R.string.PhotoEditorDiscardAlert));
-        if (outputEntry != null && !outputEntry.isEdit) {
+        if (outputEntry != null && !outputEntry.isEdit && !outputEntry.isChatAttach) {
             builder.setNeutralButton(getString(outputEntry.isDraft ? R.string.StoryKeepDraft : R.string.StorySaveDraft), (di, i) -> {
                 if (outputEntry == null) {
                     return;
