@@ -2371,15 +2371,19 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         if (parentAlert.isPhotoPicker && parentAlert.isStickerMode) {
             recorder.setEnableVideo(false);
             recorder.setEnableCaption(false);
+            recorder.setLimitedDuration(false);
         } else if (parentAlert.avatarPicker != 0) {
             recorder.setEnableVideo(true);
             recorder.setEnableCaption(false);
+            recorder.setLimitedDuration(false);
         } else if (parentAlert.baseFragment instanceof ChatActivity) {
             recorder.setEnableVideo(true);
             recorder.setEnableCaption(true);
+            recorder.setLimitedDuration(false);
         } else {
             recorder.setEnableVideo(!parentAlert.isPhotoPicker);
             recorder.setEnableCaption(parentAlert.allowEnterCaption);
+            recorder.setLimitedDuration(true);
         }
 
         recorder.openChatAttachment(

@@ -1070,12 +1070,19 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         enableVideo = enable;
 
         modeSwitcherView.setEnableVideo(enableVideo);
+        recordControl.setEnableVideo(enableVideo);
     }
 
     public void setEnableCaption(boolean enable) {
         enableCaption = enable;
 
         captionEdit.setVisibility(!enableCaption || isBot() ? View.GONE : View.VISIBLE);
+    }
+
+    public void setLimitedDuration(boolean value) {
+        recordControl.setLimitedDuration(value);
+        timelineView.setLimitedDuration(value);
+        previewView.setLimitedDuration(value);
     }
 
     private int previewW, previewH;
@@ -4179,8 +4186,8 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 //            animators.add(ObjectAnimator.ofFloat(backButton, View.ALPHA, 1));
             animators.add(ObjectAnimator.ofFloat(hintTextView, View.ALPHA, page == PAGE_CAMERA && animatedRecording && !inCheck() ? 1 : 0));
             animators.add(ObjectAnimator.ofFloat(collageHintTextView, View.ALPHA, page == PAGE_CAMERA && !animatedRecording && inCheck() ? 0.6f : 0));
-            animators.add(ObjectAnimator.ofFloat(captionContainer, View.ALPHA, page == PAGE_PREVIEW && (outputEntry == null || outputEntry.botId == 0) || page == PAGE_COVER ? 1f : 0));
-            animators.add(ObjectAnimator.ofFloat(captionContainer, View.TRANSLATION_Y, page == PAGE_PREVIEW && (outputEntry == null || outputEntry.botId == 0) || page == PAGE_COVER ? 0 : dp(12)));
+            animators.add(ObjectAnimator.ofFloat(captionContainer, View.ALPHA, page == PAGE_PREVIEW && (outputEntry == null || outputEntry.botId == 0) && enableCaption || page == PAGE_COVER ? 1f : 0));
+            animators.add(ObjectAnimator.ofFloat(captionContainer, View.TRANSLATION_Y, page == PAGE_PREVIEW && (outputEntry == null || outputEntry.botId == 0) && enableCaption || page == PAGE_COVER ? 0 : dp(12)));
             animators.add(ObjectAnimator.ofFloat(captionEdit, View.ALPHA, page == PAGE_COVER ? 0f : 1f));
             animators.add(ObjectAnimator.ofFloat(titleTextView, View.ALPHA, page == PAGE_PREVIEW || page == PAGE_COVER ? 1f : 0));
             animators.add(ObjectAnimator.ofFloat(coverButton, View.ALPHA, page == PAGE_COVER ? 1f : 0f));
@@ -4687,7 +4694,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 captionEdit.clear();
             }
             previewButtons.setFiltersVisible(outputEntry == null || (!outputEntry.isRepostMessage || outputEntry.isVideo) && !outputEntry.isCollage());
-            previewButtons.setShareEnabled(!videoError && !captionEdit.isCaptionOverLimit() && (!MessagesController.getInstance(currentAccount).getStoriesController().hasStoryLimit() || (outputEntry != null && (outputEntry.isEdit || outputEntry.botId != 0))));
+            previewButtons.setShareEnabled(!videoError && !captionEdit.isCaptionOverLimit() && (!MessagesController.getInstance(currentAccount).getStoriesController().hasStoryLimit() || (outputEntry != null && (outputEntry.isEdit || outputEntry.botId != 0 || outputEntry.isChatAttach))));
             muteButton.setImageResource(outputEntry != null && outputEntry.muted ? R.drawable.media_unmute : R.drawable.media_mute);
             previewView.setVisibility(View.VISIBLE);
             timelineView.setVisibility(View.VISIBLE);
@@ -4696,7 +4703,11 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             if (outputEntry != null && outputEntry.botId != 0) {
                 titleTextView.setText("");
             } else if (outputEntry != null && outputEntry.isChatAttach) {
-                titleTextView.setText(getString(R.string.Send));
+                if (outputEntry.isVideo) {
+                    titleTextView.setText(getString(R.string.AttachVideo));
+                } else {
+                    titleTextView.setText(getString(R.string.AttachPhoto));
+                }
             } else if (outputEntry != null && outputEntry.isEdit) {
                 titleTextView.setText(getString(R.string.RecorderEditStory));
             } else if (outputEntry != null && outputEntry.isRepostMessage) {

@@ -121,6 +121,9 @@ public class RecordControl extends View implements FlashViews.Invertable {
     private long recordingStart;
     private long lastDuration;
 
+    private boolean limitedDuration = true;
+    private boolean enableVideo = true;
+
     private final Path checkPath = new Path();
     private final Point check1 = new Point(-dpf2(29/3.0f), dpf2(7/3.0f));
     private final Point check2 = new Point(-dpf2(8.5f/3.0f), dpf2(26/3.0f));
@@ -319,7 +322,7 @@ public class RecordControl extends View implements FlashViews.Invertable {
     }
 
     private final Runnable onRecordLongPressRunnable = () -> {
-        if (recording || hasCheck()) {
+        if (!enableVideo || recording || hasCheck()) {
             return;
         }
         if (!delegate.canRecordAudio()) {
@@ -442,7 +445,8 @@ public class RecordControl extends View implements FlashViews.Invertable {
         outlineFilledPaint.setAlpha((int) (0xFF * Math.max(.7f * recordingLoading, 1f - recordEndT)));
 
         if (recordingLoading <= 0) {
-            canvas.drawArc(AndroidUtilities.rectTmp, -90, sweepAngle, false, outlineFilledPaint);
+            if (limitedDuration)
+                canvas.drawArc(AndroidUtilities.rectTmp, -90, sweepAngle, false, outlineFilledPaint);
         } else {
             final long now = SystemClock.elapsedRealtime();
             CircularProgressDrawable.getSegments((now - recordingLoadingStart) % 5400, loadingSegments);
@@ -466,7 +470,7 @@ public class RecordControl extends View implements FlashViews.Invertable {
             if (duration / 1000L != lastDuration / 1000L) {
                 delegate.onVideoDuration(duration / 1000L);
             }
-            if (duration >= MAX_DURATION) {
+            if (limitedDuration && duration >= MAX_DURATION) {
                 post(() -> {
                     recording = false;
                     longpressRecording = false;
@@ -681,6 +685,21 @@ public class RecordControl extends View implements FlashViews.Invertable {
         }
     }
 
+    public void setLimitedDuration(boolean value) {
+        if (limitedDuration != value) {
+            limitedDuration = value;
+            invalidate();
+        }
+    }
+
+    public void setEnableVideo(boolean value) {
+        if (enableVideo != value) {
+            enableVideo = value;
+            AndroidUtilities.cancelRunOnUIThread(onRecordLongPressRunnable);
+            invalidate();
+        }
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         float ox = 0, oy = 0;
@@ -708,7 +727,9 @@ public class RecordControl extends View implements FlashViews.Invertable {
             touchY = y;
 
             if (Math.abs(touchX - cx) < dp(50)) {
-                AndroidUtilities.runOnUIThread(onRecordLongPressRunnable, ViewConfiguration.getLongPressTimeout());
+                if (enableVideo) {
+                    AndroidUtilities.runOnUIThread(onRecordLongPressRunnable, ViewConfiguration.getLongPressTimeout());
+                }
             }
 
             if (flipButton.isPressed()) {

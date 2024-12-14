@@ -905,6 +905,9 @@ public class StoryEntry {
         entry.collage = layout;
         entry.collageContent = entries;
         for (StoryEntry e : entries) {
+            if (e.isChatAttach) {
+                entry.isChatAttach = true;
+            }
             if (e.isVideo) {
                 entry.isVideo = true;
                 e.videoLeft = 0;

@@ -100,6 +100,8 @@ public class PreviewView extends FrameLayout {
     private final BlurringShader.BlurManager blurManager;
     private final TextureViewHolder textureViewHolder;
 
+    private boolean limitedDuration = true;
+
     public PreviewView(Context context, BlurringShader.BlurManager blurManager, TextureViewHolder textureViewHolder) {
         super(context);
 
@@ -305,7 +307,7 @@ public class PreviewView extends FrameLayout {
                 } else {
                     duration = entry.audioDuration;
                 }
-                entry.audioRight = entry.audioDuration == 0 ? 1 : Math.min(1, Math.min(duration, TimelineView.MAX_SELECT_DURATION) / (float) entry.audioDuration);
+                entry.audioRight = entry.audioDuration == 0 ? 1 : Math.min(1, (limitedDuration ? Math.min(duration, TimelineView.MAX_SELECT_DURATION) : duration) / (float) entry.audioDuration);
             }
         }
         setupAudio(entry, animated);
@@ -354,6 +356,13 @@ public class PreviewView extends FrameLayout {
             return audioPlayer.getCurrentPosition();
         }
         return 0;
+    }
+
+    public void setLimitedDuration(boolean isLimited) {
+        if (limitedDuration != isLimited) {
+            limitedDuration = isLimited;
+            invalidate();
+        }
     }
 
     public void getCoverBitmap(Utilities.Callback<Bitmap> whenBitmapDone, View ...views) {

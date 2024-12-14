@@ -58,16 +58,18 @@ public class TimelineView extends View {
 
     // milliseconds when timeline goes out of the box
     public long getMaxScrollDuration() {
-        if (collageTracks.isEmpty()) {
+        if (limitedDuration && collageTracks.isEmpty()) {
             return 120 * 1000L;
-        } else {
+        } else if (limitedDuration) {
             return 70 * 1000L;
+        } else {
+            return Long.MAX_VALUE;
         }
     }
     // minimal allowed duration to select
     public static final long MIN_SELECT_DURATION = 1 * 1000L;
     // maximum allowed duration to select
-    public static final long MAX_SELECT_DURATION = (long) (59 * 1000L);
+    public static final long MAX_SELECT_DURATION = 59 * 1000L;
 
     interface TimelineDelegate {
         default void onProgressDragChange(boolean dragging) {};
@@ -106,6 +108,11 @@ public class TimelineView extends View {
 
     private long progress;
     private long scroll;
+
+    private boolean limitedDuration = true;
+    public void setLimitedDuration(boolean limitedDuration) {
+        this.limitedDuration = limitedDuration;
+    }
 
     private class Track {
         int index;
@@ -994,8 +1001,8 @@ public class TimelineView extends View {
                         if (delegate != null) {
                             delegate.onVideoLeftChange(videoTrack.left);
                         }
-                        if (videoTrack.right - videoTrack.left > MAX_SELECT_DURATION / (float) videoTrack.duration) {
-                            videoTrack.right = Math.min(1, videoTrack.left + MAX_SELECT_DURATION / (float) videoTrack.duration);
+                        if (videoTrack.right - videoTrack.left > getMaxSelectDuration() / (float) videoTrack.duration) {
+                            videoTrack.right = Math.min(1, videoTrack.left + getMaxSelectDuration() / (float) videoTrack.duration);
                             if (delegate != null) {
                                 delegate.onVideoRightChange(videoTrack.right);
                             }
@@ -1005,8 +1012,8 @@ public class TimelineView extends View {
                         if (delegate != null) {
                             delegate.onVideoRightChange(videoTrack.right);
                         }
-                        if (videoTrack.right - videoTrack.left > MAX_SELECT_DURATION / (float) videoTrack.duration) {
-                            videoTrack.left = Math.max(0, videoTrack.right - MAX_SELECT_DURATION / (float) videoTrack.duration);
+                        if (videoTrack.right - videoTrack.left > getMaxSelectDuration() / (float) videoTrack.duration) {
+                            videoTrack.left = Math.max(0, videoTrack.right - getMaxSelectDuration() / (float) videoTrack.duration);
                             if (delegate != null) {
                                 delegate.onVideoLeftChange(videoTrack.left);
                             }
@@ -1045,8 +1052,8 @@ public class TimelineView extends View {
                         } else if (hasRound) {
                             minValue = Math.max(minValue, (roundLeft * roundDuration + scroll - audioOffset) / (float) audioDuration);
                         } else {
-                            minValue = Math.max(minValue, audioRight - MAX_SELECT_DURATION / (float) audioDuration);
-                            if (!hadDragChange && d < 0 && audioLeft <= (audioRight - MAX_SELECT_DURATION / (float) audioDuration)) {
+                            minValue = Math.max(minValue, audioRight - getMaxSelectDuration() / (float) audioDuration);
+                            if (!hadDragChange && d < 0 && audioLeft <= (audioRight - getMaxSelectDuration() / (float) audioDuration)) {
                                 pressHandle = HANDLE_AUDIO_REGION;
                             }
                         }
@@ -1071,8 +1078,8 @@ public class TimelineView extends View {
                         } else if (hasRound) {
                             maxValue = Math.min(maxValue, (roundRight * roundDuration + scroll - audioOffset) / (float) audioDuration);
                         } else {
-                            maxValue = Math.min(maxValue, audioLeft + MAX_SELECT_DURATION / (float) audioDuration);
-                            if (!hadDragChange && d > 0 && audioRight >= (audioLeft + MAX_SELECT_DURATION / (float) audioDuration)) {
+                            maxValue = Math.min(maxValue, audioLeft + getMaxSelectDuration() / (float) audioDuration);
+                            if (!hadDragChange && d > 0 && audioRight >= (audioLeft + getMaxSelectDuration() / (float) audioDuration)) {
                                 pressHandle = HANDLE_AUDIO_REGION;
                             }
                         }
@@ -1129,8 +1136,8 @@ public class TimelineView extends View {
                         } else if (collageMain != null) {
                             minValue = Math.max(minValue, (collageMain.left * collageMain.duration + scroll - roundOffset) / (float) roundDuration);
                         } else {
-                            minValue = Math.max(minValue, roundRight - MAX_SELECT_DURATION / (float) roundDuration);
-                            if (!hadDragChange && d < 0 && roundLeft <= (roundRight - MAX_SELECT_DURATION / (float) roundDuration)) {
+                            minValue = Math.max(minValue, roundRight - getMaxSelectDuration() / (float) roundDuration);
+                            if (!hadDragChange && d < 0 && roundLeft <= (roundRight - getMaxSelectDuration() / (float) roundDuration)) {
                                 pressHandle = HANDLE_AUDIO_REGION;
                             }
                         }
@@ -1153,8 +1160,8 @@ public class TimelineView extends View {
                         } if (collageMain != null) {
                             maxValue = Math.min(maxValue, (collageMain.right * collageMain.duration + scroll - roundOffset) / (float) roundDuration);
                         } else {
-                            maxValue = Math.min(maxValue, roundLeft + MAX_SELECT_DURATION / (float) roundDuration);
-                            if (!hadDragChange && d > 0 && roundRight >= (roundLeft + MAX_SELECT_DURATION / (float) roundDuration)) {
+                            maxValue = Math.min(maxValue, roundLeft + getMaxSelectDuration() / (float) roundDuration);
+                            if (!hadDragChange && d > 0 && roundRight >= (roundLeft + getMaxSelectDuration() / (float) roundDuration)) {
                                 pressHandle = HANDLE_AUDIO_REGION;
                             }
                         }
@@ -1208,8 +1215,8 @@ public class TimelineView extends View {
                         float maxValue = track.right - minAudioSelect() / (float) track.duration;
                         float minValue = Math.max(0, scroll - track.offset) / (float) track.duration;
                         if (track == collageMain) {
-                            minValue = Math.max(minValue, track.right - MAX_SELECT_DURATION / (float) track.duration);
-                            if (!hadDragChange && d < 0 && track.left <= (track.right - MAX_SELECT_DURATION / (float) track.duration)) {
+                            minValue = Math.max(minValue, track.right - getMaxSelectDuration() / (float) track.duration);
+                            if (!hadDragChange && d < 0 && track.left <= (track.right - getMaxSelectDuration() / (float) track.duration)) {
                                 pressHandle = HANDLE_COLLAGE_REGION;
                             }
                         }
@@ -1231,8 +1238,8 @@ public class TimelineView extends View {
                         float maxValue = Math.min(1, Math.max(0, scroll - track.offset + videoScrollDuration) / (float) track.duration);
                         float minValue = track.left + minAudioSelect() / (float) track.duration;
                         if (track == collageMain) {
-                            maxValue = Math.min(maxValue, track.left + MAX_SELECT_DURATION / (float) track.duration);
-                            if (!hadDragChange && d > 0 && track.right >= (track.left + MAX_SELECT_DURATION / (float) track.duration)) {
+                            maxValue = Math.min(maxValue, track.left + getMaxSelectDuration() / (float) track.duration);
+                            if (!hadDragChange && d > 0 && track.right >= (track.left + getMaxSelectDuration() / (float) track.duration)) {
                                 pressHandle = HANDLE_COLLAGE_REGION;
                             }
                         }
@@ -1467,7 +1474,11 @@ public class TimelineView extends View {
     }
 
     private long minAudioSelect() {
-        return (long) Math.max(MIN_SELECT_DURATION, Math.min(getBaseDuration(), MAX_SELECT_DURATION) * 0.15f);
+        return (long) Math.max(MIN_SELECT_DURATION, Math.min(getBaseDuration(), getMaxSelectDuration()) * 0.15f);
+    }
+    
+    public long getMaxSelectDuration() {
+        return limitedDuration ? MAX_SELECT_DURATION : Long.MAX_VALUE;
     }
 
     private void moveAudioOffset(final float d) {
