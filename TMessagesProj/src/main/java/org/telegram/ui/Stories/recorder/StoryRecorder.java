@@ -195,6 +195,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
     private boolean enableVideo;
     private boolean enableCaption;
+    private Boolean desiredCameraFace = null;
 
     public static StoryRecorder getInstance(Activity activity, int currentAccount) {
         if (instance != null && (instance.activity != activity || instance.currentAccount != currentAccount)) {
@@ -643,10 +644,11 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         botEdit = null;
     }
 
-    public void openChatAttachment(SourceView sourceView, boolean animated) {
+    public void openChatAttachment(SourceView sourceView, boolean frontface, boolean animated) {
         this.isChatAttach = true;
         open(sourceView, animated);
         this.isChatAttach = true;
+        setCameraFace(frontface);
     }
 
     public void openEdit(SourceView sourceView, StoryEntry entry, long time, boolean animated) {
@@ -6560,7 +6562,26 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     }
 
     private boolean getCameraFace() {
+        if (desiredCameraFace != null) {
+            boolean value = desiredCameraFace;
+            desiredCameraFace = null;
+            return value;
+        }
         return MessagesController.getGlobalMainSettings().getBoolean("stories_camera", false);
+    }
+
+    private void setCameraFace(boolean frontface) {
+        if (cameraView == null) {
+            desiredCameraFace = frontface;
+        } else if (cameraView.isFrontface() != frontface) {
+            desiredCameraFace = null;
+            cameraView.switchCamera();
+            saveCameraFace(frontface);
+        }
+    }
+
+    public boolean isFrontFace() {
+        return cameraView.isFrontface();
     }
 
     @Override
