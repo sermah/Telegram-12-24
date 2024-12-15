@@ -61,6 +61,7 @@ public class CaptionStory extends CaptionContainerView {
     private boolean periodVisible = true;
 
     private boolean isChatAttach = false;
+    private boolean enableVideo = true;
 
     public static final int[] periods = new int[] { 6 * 3600, 12 * 3600, 86400, 2 * 86400 };
     private int periodIndex = 0;
@@ -130,12 +131,16 @@ public class CaptionStory extends CaptionContainerView {
     }
 
     public void setChatAttach(boolean value) {
-        isChatAttach = value;
+        if (isChatAttach != value) {
+            isChatAttach = value;
+            setPeriodVisible(periodVisible);
+        }
+    }
 
-        if (isChatAttach) {
-            periodButton.setVisibility(GONE);
-        } else {
-            periodButton.setVisibility(VISIBLE);
+    public void setEnableVideo(boolean enable) {
+        if (enableVideo != enable) {
+            enableVideo = enable;
+            roundButton.setVisibility(enableVideo && !keyboardShown ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -356,14 +361,14 @@ public class CaptionStory extends CaptionContainerView {
             boundsPath.addRoundRect(bounds, dp(21), dp(21), Path.Direction.CW);
             canvas.clipPath(boundsPath);
 
-            if (roundButton.getVisibility() == View.INVISIBLE || collapsedT.get() > 0) {
+            if (enableVideo && (roundButton.getVisibility() == View.INVISIBLE || collapsedT.get() > 0)) {
                 canvas.save();
                 canvas.translate(roundButton.getX() + dp(180) * (1f - cancel), roundButton.getY());
                 roundButton.draw(canvas);
                 canvas.restore();
             }
 
-            if (periodButton.getVisibility() == View.INVISIBLE || collapsedT.get() > 0) {
+            if (periodVisible && (periodButton.getVisibility() == View.INVISIBLE || collapsedT.get() > 0)) {
                 canvas.save();
                 canvas.translate(periodButton.getX() + dp(180) * (1f - cancel), periodButton.getY());
                 periodButton.draw(canvas);
@@ -520,7 +525,7 @@ public class CaptionStory extends CaptionContainerView {
     protected void beforeUpdateShownKeyboard(boolean show) {
         if (!show) {
             periodButton.setVisibility(periodVisible ? View.VISIBLE : View.GONE);
-            roundButton.setVisibility(View.VISIBLE);
+            roundButton.setVisibility(enableVideo ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -533,7 +538,7 @@ public class CaptionStory extends CaptionContainerView {
     @Override
     protected void afterUpdateShownKeyboard(boolean show) {
         periodButton.setVisibility(!show && periodVisible ? View.VISIBLE : View.GONE);
-        roundButton.setVisibility(!show ? View.VISIBLE : View.GONE);
+        roundButton.setVisibility(!show && enableVideo ? View.VISIBLE : View.GONE);
         if (show) {
             periodButton.setVisibility(View.GONE);
         }
@@ -580,7 +585,7 @@ public class CaptionStory extends CaptionContainerView {
             }
         }
         AndroidUtilities.rectTmp.set(roundButton.getX(), roundButton.getY(), roundButton.getX() + roundButton.getMeasuredWidth(), roundButton.getY() + roundButton.getMeasuredHeight());
-        if (recordTouch || !hasRoundVideo && !keyboardShown && AndroidUtilities.rectTmp.contains(ev.getX(), ev.getY())) {
+        if (recordTouch || enableVideo && !hasRoundVideo && !keyboardShown && AndroidUtilities.rectTmp.contains(ev.getX(), ev.getY())) {
             return roundButtonTouchEvent(ev);
         }
         if (recording && locked && cancelBounds.contains(ev.getX(), ev.getY())) {
@@ -598,8 +603,8 @@ public class CaptionStory extends CaptionContainerView {
 
     private final Runnable doneCancel = () -> {
         setCollapsed(false, Integer.MIN_VALUE);
-        roundButton.setVisibility(VISIBLE);
-        periodButton.setVisibility(VISIBLE);
+        roundButton.setVisibility(enableVideo ? VISIBLE : GONE);
+        periodButton.setVisibility(periodVisible ? VISIBLE : GONE);
     };
 
     private boolean roundButtonTouchEvent(MotionEvent ev) {
@@ -652,8 +657,8 @@ public class CaptionStory extends CaptionContainerView {
                 if (!locked && !cancelling && slideProgress >= 1) {
                     cancelling = true;
                     recording = false;
-                    roundButton.setVisibility(INVISIBLE);
-                    periodButton.setVisibility(INVISIBLE);
+                    roundButton.setVisibility(enableVideo ? INVISIBLE : GONE);
+                    periodButton.setVisibility(periodVisible ? INVISIBLE : GONE);
                     recordPaint.playDeleteAnimation();
 
                     if (currentRecorder != null) {

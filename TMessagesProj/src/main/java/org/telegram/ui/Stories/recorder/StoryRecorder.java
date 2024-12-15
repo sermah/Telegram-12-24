@@ -2998,7 +2998,8 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     private void buildAndSendChatAttach(StoryEntry entry) {
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.filePreparingFailed);
         NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.fileNewChunkAvailable);
-        if (entry.wouldBeVideo()) {
+        boolean willBeVideo = entry.wouldBeVideo();
+        if (enableVideo && willBeVideo) {
             TLRPC.TL_message message = new TLRPC.TL_message();
             message.id = 1;
             String path = message.attachPath = StoryEntry.makeCacheFile(currentAccount, true).getAbsolutePath();
@@ -4634,6 +4635,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
 //            privacySelector.setStoryPeriod(outputEntry == null || !UserConfig.getInstance(currentAccount).isPremium() ? 86400 : outputEntry.period);
             captionEdit.setChatAttach(isChatAttach);
+            captionEdit.setEnableVideo(enableVideo);
             captionEdit.setPeriod(outputEntry == null ? 86400 : outputEntry.period, false);
             captionEdit.setPeriodVisible(!MessagesController.getInstance(currentAccount).premiumFeaturesBlocked() && (outputEntry == null || !outputEntry.isEdit) && !isChatAttach);
             captionEdit.setHasRoundVideo(outputEntry != null && outputEntry.round != null);
@@ -6581,6 +6583,9 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
     }
 
     public boolean isFrontFace() {
+        if (cameraView == null) {
+            return MessagesController.getGlobalMainSettings().getBoolean("stories_camera", false);
+        }
         return cameraView.isFrontface();
     }
 
