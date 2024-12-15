@@ -2976,7 +2976,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 createPhotoPaintView();
                 hidePhotoPaintView();
                 if (paintView != null) {
-                    paintView.openStickers();
+                    paintView.openStickers(isChatAttach, enableVideo);
                 }
             } else if (btn == PreviewButtons.BUTTON_ADJUST) {
                 switchToEditMode(EDIT_MODE_FILTER, true);

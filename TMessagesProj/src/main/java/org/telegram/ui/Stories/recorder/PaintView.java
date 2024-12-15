@@ -1902,6 +1902,10 @@ public class PaintView extends SizeNotifierFrameLayoutPhoto implements IPhotoPai
     private EmojiBottomSheet emojiPopup;
 
     private void openStickersView() {
+        openStickersView(false, true);
+    }
+
+    private void openStickersView(boolean isChatAttach, boolean enableVideo) {
         final int wasSelectedIndex = tabsSelectedIndex;
         switchTab(1);
         postDelayed(() -> {
@@ -1921,15 +1925,22 @@ public class PaintView extends SizeNotifierFrameLayoutPhoto implements IPhotoPai
                 if (isBot) {
                     return widgetId == WIDGET_PHOTO;
                 }
-                if (widgetId == WIDGET_WEATHER) {
-                    boolean hasWeather = false;
-                    for (int i = 0; i < entitiesView.getChildCount(); ++i) {
-                        if (entitiesView.getChildAt(i) instanceof WeatherView) {
-                            hasWeather = true;
-                            break;
+                switch (widgetId) {
+                    case WIDGET_AUDIO:
+                        return enableVideo;
+                    case WIDGET_WEATHER:
+                        boolean hasWeather = false;
+                        for (int i = 0; i < entitiesView.getChildCount(); ++i) {
+                            if (entitiesView.getChildAt(i) instanceof WeatherView) {
+                                hasWeather = true;
+                                break;
+                            }
                         }
-                    }
-                    return !hasWeather;
+                        return !isChatAttach && !hasWeather;
+                    case WIDGET_LOCATION:
+                    case WIDGET_LINK:
+                    case WIDGET_REACTION:
+                        return !isChatAttach;
                 }
                 return true;
             }
@@ -3237,9 +3248,9 @@ public class PaintView extends SizeNotifierFrameLayoutPhoto implements IPhotoPai
         createText(true);
     }
 
-    public void openStickers() {
+    public void openStickers(boolean isChatAttach, boolean enableVideo) {
         switchTab(1);
-        openStickersView();
+        openStickersView(isChatAttach, enableVideo);
     }
 
     @Override

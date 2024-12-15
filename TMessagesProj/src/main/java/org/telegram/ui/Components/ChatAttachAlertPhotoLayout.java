@@ -2298,13 +2298,6 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         if (cameraView == null || cameraInitAnimation != null || parentAlert.isDismissed()) {
             return;
         }
-        if (cameraPhotos.isEmpty()) {
-//            counterTextView.setVisibility(View.INVISIBLE);
-//            cameraPhotoRecyclerView.setVisibility(View.GONE);
-        } else {
-//            counterTextView.setVisibility(View.VISIBLE);
-//            cameraPhotoRecyclerView.setVisibility(View.VISIBLE);
-        }
         if (parentAlert.getCommentView().isKeyboardVisible() && isFocusable()) {
             parentAlert.getCommentView().closeKeyboard();
         }
