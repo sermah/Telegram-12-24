@@ -24,6 +24,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Outline;
@@ -387,7 +388,9 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             SourceView src = new SourceView() {
                 @Override
                 protected void show(boolean sent) {
-                    attachCell.setVisibility(View.VISIBLE);
+                    attachCell.post(() -> {
+                        attachCell.setVisibility(View.VISIBLE);
+                    });
                 }
                 @Override
                 protected void hide() {
@@ -399,8 +402,8 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             int[] loc = new int[2];
             attachCell.getLocationOnScreen(loc);
             attachCell.updateBitmap();
-            src.screenRect.set(loc[0], loc[1], loc[0] + attachCell.getWidth(), loc[1] + attachCell.getHeight());
-//            src.backgroundDrawable = attachCell.getDrawable();
+            src.screenRect.set(loc[0], loc[1], loc[0] + attachCell.getWidth() - AndroidUtilities.dp(5), loc[1] + attachCell.getHeight() - AndroidUtilities.dp(5));
+            src.backgroundDrawable = attachCell.getDrawable().mutate();
             src.iconDrawable = attachCell.getImageView().getDrawable().mutate();
             src.iconSize = AndroidUtilities.dp(34);
             return src;
@@ -6227,7 +6230,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         }
     }
 
-    private void saveLastCameraBitmap(Runnable whenDone) {
+    public void saveLastCameraBitmap(Runnable whenDone) {
         if (cameraView == null || cameraView.getTextureView() == null) {
             return;
         }

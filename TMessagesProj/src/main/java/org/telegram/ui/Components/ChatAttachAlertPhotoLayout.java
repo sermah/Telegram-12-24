@@ -2305,7 +2305,9 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         AndroidUtilities.setLightNavigationBar(parentAlert.getWindow(), false);
         parentAlert.getWindow().addFlags(FLAG_KEEP_SCREEN_ON);
 
-        hideCamera(false, () -> openStoryRecorder(animated));
+        hideCamera(false, () -> {
+            openStoryRecorder(animated);
+        });
 
         parentAlert.delegate.onCameraOpened();
         if (cameraView != null) {
@@ -2324,10 +2326,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
     }
 
     public void openStoryRecorder(boolean animated) {
-        StoryRecorder recorder = StoryRecorder
-                .getInstance(AndroidUtilities.findActivity(getContext()), currentAccount)
-                .canChangePeer(false);
-        recorder.setChatAttachListener(new StoryRecorder.ChatAttachListener() {
+        storyRecorder.setChatAttachListener(new StoryRecorder.ChatAttachListener() {
             @Override
             protected void onPhoto(String path, int orientation, int width, int height, CharSequence caption) {
                 MediaController.PhotoEntry photoEntry = new MediaController.PhotoEntry(0, lastImageId--, 0, path, orientation, false, width, height, 0);
@@ -2362,35 +2361,39 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                 }
             }
         });
-        recorder.setOnPrepareCloseListener((t, close, sent, peer) -> {
+        storyRecorder.setOnPrepareCloseListener((t, close, sent, peer) -> {
             closeCamera(false);
-            isCameraFrontfaceBeforeEnteringEditMode = recorder.isFrontFace();
+            storyRecorder.saveLastCameraBitmap(() -> {
+                cameraCell.updateBitmap();
+                storyRecorder.replaceSourceView(StoryRecorder.SourceView.fromPhotoAttachCameraCell(cameraCell));
+            });
+            isCameraFrontfaceBeforeEnteringEditMode = storyRecorder.isFrontFace();
             AndroidUtilities.runOnUIThread(close);
 //            if (sent) {
 //                parentAlert.dismiss(false);
 //            }
         });
-        recorder.setOnCloseListener(this::showCamera);
+        storyRecorder.setOnCloseListener(this::showCamera);
 
         if (parentAlert.isPhotoPicker && parentAlert.isStickerMode) {
-            recorder.setEnableVideo(false);
-            recorder.setEnableCaption(false);
-            recorder.setLimitedDuration(false);
+            storyRecorder.setEnableVideo(false);
+            storyRecorder.setEnableCaption(false);
+            storyRecorder.setLimitedDuration(false);
         } else if (parentAlert.avatarPicker != 0) {
-            recorder.setEnableVideo(true);
-            recorder.setEnableCaption(false);
-            recorder.setLimitedDuration(false);
+            storyRecorder.setEnableVideo(true);
+            storyRecorder.setEnableCaption(false);
+            storyRecorder.setLimitedDuration(false);
         } else if (parentAlert.baseFragment instanceof ChatActivity) {
-            recorder.setEnableVideo(true);
-            recorder.setEnableCaption(true);
-            recorder.setLimitedDuration(false);
+            storyRecorder.setEnableVideo(true);
+            storyRecorder.setEnableCaption(true);
+            storyRecorder.setLimitedDuration(false);
         } else {
-            recorder.setEnableVideo(!parentAlert.isPhotoPicker);
-            recorder.setEnableCaption(parentAlert.allowEnterCaption);
-            recorder.setLimitedDuration(true);
+            storyRecorder.setEnableVideo(!parentAlert.isPhotoPicker);
+            storyRecorder.setEnableCaption(parentAlert.allowEnterCaption);
+            storyRecorder.setLimitedDuration(true);
         }
 
-        recorder.openChatAttachment(
+        storyRecorder.openChatAttachment(
                 StoryRecorder.SourceView.fromPhotoAttachCameraCell(cameraCell),
                 isCameraFrontfaceBeforeStoryRecorder,
                 animated
@@ -2780,11 +2783,16 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
     float additionCloseCameraY;
 
     public void closeCamera(boolean animated) {
-        if (takingPhoto || cameraView == null) {
+        if (storyRecorder != null) {
+            storyRecorder.close(animated);
+        }
+        onCameraClose();
+    }
+
+    public void onCameraClose() {
+        if (cameraView == null) {
             return;
         }
-        animateCameraValues[1] = itemSize;
-        animateCameraValues[2] = itemSize;
 
         AndroidUtilities.setLightNavigationBar(parentAlert.getWindow(), AndroidUtilities.computePerceivedBrightness(getThemedColor(Theme.key_windowBackgroundGray)) > 0.721);
 
