@@ -2,6 +2,7 @@ package org.telegram.ui.Stories.recorder;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
+import static org.telegram.messenger.AndroidUtilities.getActivity;
 import static org.telegram.messenger.AndroidUtilities.touchSlop;
 import static org.telegram.messenger.LocaleController.getString;
 
@@ -403,7 +404,36 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             attachCell.getLocationOnScreen(loc);
             attachCell.updateBitmap();
             src.screenRect.set(loc[0], loc[1], loc[0] + attachCell.getWidth() - AndroidUtilities.dp(5), loc[1] + attachCell.getHeight() - AndroidUtilities.dp(5));
-            src.backgroundDrawable = attachCell.getDrawable().mutate();
+            Bitmap bitmap = null;
+            try {
+                File file = new File(ApplicationLoader.getFilesDirFixed(), "cthumb.jpg");
+                bitmap = BitmapFactory.decodeFile(file.getAbsolutePath());
+            } catch (Throwable ignore) {
+
+            }
+            if (bitmap != null) {
+                Bitmap finalBitmap = bitmap;
+                src.backgroundDrawable = new BitmapDrawable(
+                        AndroidUtilities.getActivity().getResources(), finalBitmap)
+//                    ;
+                {
+                    private final float ratio = (float) finalBitmap.getHeight() / finalBitmap.getWidth();
+
+                    @Override
+                    public void draw(Canvas canvas) {
+                        Rect bounds = getBounds();
+                        canvas.save();
+
+                        canvas.clipRect(bounds);
+                        canvas.translate(bounds.centerX(), bounds.centerY());
+                        canvas.scale(1, ratio);
+                        canvas.translate(-bounds.centerX(), -bounds.centerY());
+                        super.draw(canvas);
+
+                        canvas.restore();
+                    }
+                };
+            }
             src.iconDrawable = attachCell.getImageView().getDrawable().mutate();
             src.iconSize = AndroidUtilities.dp(34);
             return src;
