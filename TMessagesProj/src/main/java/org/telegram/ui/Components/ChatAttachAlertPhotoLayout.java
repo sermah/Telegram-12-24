@@ -2357,6 +2357,27 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                     PhotoViewer.getInstance().setParentActivity(parentAlert.baseFragment, resourcesProvider);
                     PhotoViewer.getInstance().setParentAlert(parentAlert);
 
+                    ArrayList<Object> arrayList = new ArrayList<>();
+                    arrayList.add(photoEntry);
+                    PhotoViewer.getInstance().openPhotoForSelect(arrayList, 0, PhotoViewer.SELECT_TYPE_STICKER, false, new PhotoViewer.EmptyPhotoViewerProvider() {
+                        @Override
+                        public boolean allowCaption() {
+                            return false;
+                        }
+                        @Override
+                        public void sendButtonPressed(int index, VideoEditedInfo videoEditedInfo, boolean notify, int scheduleDate, boolean forceDocument) {
+                            if (parentAlert.delegate == null) {
+                                return;
+                            }
+                            photoEntry.editedInfo = videoEditedInfo;
+                            ChatAttachAlertPhotoLayout.selectedPhotosOrder.clear();
+                            ChatAttachAlertPhotoLayout.selectedPhotos.clear();
+                            ChatAttachAlertPhotoLayout.selectedPhotosOrder.add(0);
+                            ChatAttachAlertPhotoLayout.selectedPhotos.put(0, photoEntry);
+                            parentAlert.delegate.didPressedButton(7, true, notify, scheduleDate, 0, isCaptionAbove(), forceDocument);
+                        }
+                    }, parentAlert.baseFragment instanceof ChatActivity ? (ChatActivity) parentAlert.baseFragment : null);
+
                     PhotoViewer.getInstance().enableStickerMode(null, false, parentAlert.customStickerHandler);
                 }
             }
