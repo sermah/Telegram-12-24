@@ -1902,10 +1902,10 @@ public class PaintView extends SizeNotifierFrameLayoutPhoto implements IPhotoPai
     private EmojiBottomSheet emojiPopup;
 
     private void openStickersView() {
-        openStickersView(false, true);
+        openStickersView(StoryEntry.TYPE_STORY, true);
     }
 
-    private void openStickersView(boolean isChatAttach, boolean enableVideo) {
+    private void openStickersView(int entryType, boolean enableVideo) {
         final int wasSelectedIndex = tabsSelectedIndex;
         switchTab(1);
         postDelayed(() -> {
@@ -1936,11 +1936,11 @@ public class PaintView extends SizeNotifierFrameLayoutPhoto implements IPhotoPai
                                 break;
                             }
                         }
-                        return !isChatAttach && !hasWeather;
+                        return entryType == StoryEntry.TYPE_STORY && !hasWeather;
                     case WIDGET_LOCATION:
                     case WIDGET_LINK:
                     case WIDGET_REACTION:
-                        return !isChatAttach;
+                        return entryType == StoryEntry.TYPE_STORY;
                 }
                 return true;
             }
@@ -3248,9 +3248,9 @@ public class PaintView extends SizeNotifierFrameLayoutPhoto implements IPhotoPai
         createText(true);
     }
 
-    public void openStickers(boolean isChatAttach, boolean enableVideo) {
+    public void openStickers(int entryType, boolean enableVideo) {
         switchTab(1);
-        openStickersView(isChatAttach, enableVideo);
+        openStickersView(entryType, enableVideo);
     }
 
     @Override

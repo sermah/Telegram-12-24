@@ -103,6 +103,7 @@ import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.PhotoViewer;
 import org.telegram.ui.Stars.StarsIntroActivity;
 import org.telegram.ui.Stories.recorder.AlbumButton;
+import org.telegram.ui.Stories.recorder.StoryEntry;
 import org.telegram.ui.Stories.recorder.StoryRecorder;
 
 import java.io.ByteArrayOutputStream;
@@ -2396,26 +2397,33 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
         });
         storyRecorder.setOnCloseListener(this::showCamera);
 
+        int type;
+
         if (parentAlert.isPhotoPicker && parentAlert.isStickerMode) {
             storyRecorder.setEnableVideo(false);
             storyRecorder.setEnableCaption(false);
             storyRecorder.setLimitedDuration(false);
+            type = StoryEntry.TYPE_STICKER;
         } else if (parentAlert.avatarPicker != 0) {
             storyRecorder.setEnableVideo(true);
             storyRecorder.setEnableCaption(false);
             storyRecorder.setLimitedDuration(false);
+            type = StoryEntry.TYPE_AVATAR;
         } else if (parentAlert.baseFragment instanceof ChatActivity) {
             storyRecorder.setEnableVideo(true);
             storyRecorder.setEnableCaption(true);
             storyRecorder.setLimitedDuration(false);
+            type = StoryEntry.TYPE_MESSAGE;
         } else {
             storyRecorder.setEnableVideo(!parentAlert.isPhotoPicker);
             storyRecorder.setEnableCaption(parentAlert.allowEnterCaption);
             storyRecorder.setLimitedDuration(true);
+            type = StoryEntry.TYPE_MESSAGE;
         }
 
         storyRecorder.openChatAttachment(
                 StoryRecorder.SourceView.fromPhotoAttachCameraCell(cameraCell),
+                type,
                 isCameraFrontfaceBeforeStoryRecorder,
                 animated
         );

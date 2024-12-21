@@ -57,6 +57,11 @@ public class StoryEntry {
 
     public final int currentAccount = UserConfig.selectedAccount;
 
+    public static final int TYPE_STORY = 0;
+    public static final int TYPE_MESSAGE = 1;
+    public static final int TYPE_AVATAR = 2;
+    public static final int TYPE_STICKER = 3;
+
     public long draftId;
     public boolean isDraft;
     public long draftDate;
@@ -153,7 +158,7 @@ public class StoryEntry {
     public int period = 86400;
 
     public long botId;
-    public boolean isChatAttach;
+    public int type;
     public String botLang = "";
     public TLRPC.InputMedia editingBotPreview;
 
@@ -905,9 +910,7 @@ public class StoryEntry {
         entry.collage = layout;
         entry.collageContent = entries;
         for (StoryEntry e : entries) {
-            if (e.isChatAttach) {
-                entry.isChatAttach = true;
-            }
+            e.type = entry.type;
             if (e.isVideo) {
                 entry.isVideo = true;
                 e.videoLeft = 0;
@@ -1548,7 +1551,7 @@ public class StoryEntry {
         newEntry.roundVolume = roundVolume;
         newEntry.isEditingCover = isEditingCover;
         newEntry.botId = botId;
-        newEntry.isChatAttach = isChatAttach;
+        newEntry.type = type;
         newEntry.botLang = botLang;
         newEntry.editingBotPreview = editingBotPreview;
         newEntry.cover = cover;
