@@ -2359,6 +2359,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
                     PhotoViewer.getInstance().setParentAlert(parentAlert);
 
                     ArrayList<Object> arrayList = new ArrayList<>();
+                    photoEntry.orientation = 0;
                     arrayList.add(photoEntry);
                     PhotoViewer.getInstance().openPhotoForSelect(arrayList, 0, PhotoViewer.SELECT_TYPE_STICKER, false, new PhotoViewer.EmptyPhotoViewerProvider() {
                         @Override

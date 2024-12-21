@@ -910,7 +910,7 @@ public class StoryEntry {
         entry.collage = layout;
         entry.collageContent = entries;
         for (StoryEntry e : entries) {
-            e.type = entry.type;
+            entry.type = e.type;
             if (e.isVideo) {
                 entry.isVideo = true;
                 e.videoLeft = 0;
