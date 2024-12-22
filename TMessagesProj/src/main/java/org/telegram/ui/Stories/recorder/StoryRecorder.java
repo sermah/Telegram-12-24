@@ -1122,7 +1122,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
     private int previewW, previewH;
     private int underControls;
-    private boolean underStatusBar;
+    private boolean underStatusBar, fullScreenMode;
     private boolean scrollingY, scrollingX;
 
     private int insetLeft, insetTop, insetRight, insetBottom;
@@ -1544,7 +1544,12 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
             final int hFromW = (int) Math.ceil(w / 9f * 16f);
             underControls = dp(48);
-            if (hFromW + underControls <= H - navbar) {
+            fullScreenMode = entryType != StoryEntry.TYPE_STORY && currentPage == PAGE_CAMERA;
+            if (fullScreenMode) {
+                previewW = W;
+                previewH = H;
+                underStatusBar = false;
+            } else if (hFromW + underControls <= H - navbar) {
                 previewW = w;
                 previewH = hFromW;
                 underStatusBar = previewH + underControls > H - navbar - statusbar;
@@ -1553,10 +1558,10 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 previewH = H - underControls - navbar - statusbar;
                 previewW = (int) Math.ceil(previewH * 9f / 16f);
             }
-            underControls = Utilities.clamp(H - previewH - (underStatusBar ? 0 : statusbar), dp(68), dp(48));
+            underControls = Utilities.clamp(H - previewH - (underStatusBar || fullScreenMode ? 0 : statusbar), dp(68), dp(48));
 
             int flags = getSystemUiVisibility();
-            if (underStatusBar) {
+            if (underStatusBar || fullScreenMode) {
                 flags |= View.SYSTEM_UI_FLAG_FULLSCREEN;
             } else {
                 flags &= ~View.SYSTEM_UI_FLAG_FULLSCREEN;
@@ -1631,7 +1636,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 } else if (child instanceof Bulletin.ParentLayout) {
                     child.measure(
                         MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY),
-                        MeasureSpec.makeMeasureSpec(Math.min(dp(340), H - (underStatusBar ? 0 : statusbar)), MeasureSpec.EXACTLY)
+                        MeasureSpec.makeMeasureSpec(Math.min(dp(340), H - (underStatusBar || fullScreenMode ? 0 : statusbar)), MeasureSpec.EXACTLY)
                     );
                 }
             }
@@ -1650,10 +1655,10 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             final int statusbar = insetTop;
             final int underControls = navbarContainer.getMeasuredHeight();
 
-            final int T = underStatusBar ? 0 : statusbar;
+            final int T = fullScreenMode || underStatusBar ? 0 : statusbar;
             int l = insetLeft + (W - insetRight - previewW) / 2,
                 r = insetLeft + (W - insetRight + previewW) / 2, t, b;
-            if (underStatusBar) {
+            if (underStatusBar || fullScreenMode) {
                 t = T;
                 b = T + previewH + underControls;
             } else {
@@ -1813,7 +1818,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
         @Override
         protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-            final int t = underStatusBar ? insetTop : 0;
+            final int t = underStatusBar || fullScreenMode ? insetTop : 0;
 
             final int w = right - left;
             final int h = bottom - top;
@@ -1821,8 +1826,15 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
             previewContainer.layout(0, 0, previewW, previewH);
             previewContainer.setPivotX(previewW * .5f);
             actionBarContainer.layout(0, t, previewW, t + actionBarContainer.getMeasuredHeight());
-            controlContainer.layout(0, previewH - controlContainer.getMeasuredHeight(), previewW, previewH);
-            navbarContainer.layout(0, previewH, previewW, previewH + navbarContainer.getMeasuredHeight());
+            int navbarHeight = navbarContainer.getMeasuredHeight();
+            if (fullScreenMode) {
+                navbarHeight += insetBottom;
+                controlContainer.layout(0, previewH - controlContainer.getMeasuredHeight() - navbarHeight, previewW, previewH - navbarHeight);
+                navbarContainer.layout(0, previewH - navbarHeight, previewW, previewH - insetBottom);
+            } else {
+                controlContainer.layout(0, previewH - controlContainer.getMeasuredHeight(), previewW, previewH);
+                navbarContainer.layout(0, previewH, previewW, previewH + navbarHeight);
+            }
             captionContainer.layout(0, 0, previewW, previewH);
             if (captionEditOverlay != null) {
                 captionEditOverlay.layout(0, 0, w, h);
