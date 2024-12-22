@@ -221,6 +221,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         protected abstract void onPhoto(String path, int orientation, int width, int height, CharSequence caption);
         protected abstract void onVideo(String path, int duration, int width, int height, CharSequence caption);
         protected abstract void onFail(boolean isVideo);
+        protected abstract void onFutureLoad();
     }
 
     public static boolean isVisible() {
@@ -3055,6 +3056,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 attachCaption = entry.caption;
                 if (attachMessageObject.videoEditedInfo.needConvert()) {
                     MediaController.getInstance().scheduleVideoConvert(attachMessageObject, false, false, false);
+                    attachListener.onFutureLoad();
                 } else {
                     attachFile = new File(info.originalPath);
                     boolean rename = attachFile.renameTo(new File(path));

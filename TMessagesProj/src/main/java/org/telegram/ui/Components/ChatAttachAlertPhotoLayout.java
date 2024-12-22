@@ -2347,6 +2347,11 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
 
             }
 
+            @Override
+            protected void onFutureLoad() {
+                parentAlert.dismiss(false);
+            }
+
             private void postEntry(MediaController.PhotoEntry photoEntry) {
                 photoEntry.canDeleteAfter = true;
                 selectedPhotos.put(photoEntry.imageId, photoEntry);
