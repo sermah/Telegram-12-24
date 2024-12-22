@@ -7,6 +7,44 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1005047776863:android:060ce49c4743d8d75bfdea",
+        "android_client_info": {
+          "package_name": "dev.sermah.telegram.messenger"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtEOlB2RkMGocEa1Oi5nP-MLhIpFxEYRc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1005047776863:android:9a9bdc9340d0ad8c5bfdea",
+        "android_client_info": {
+          "package_name": "dev.sermah.telegram.messenger.beta"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtEOlB2RkMGocEa1Oi5nP-MLhIpFxEYRc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1005047776863:android:81eabcc1182df5d15bfdea",
         "android_client_info": {
           "package_name": "org.telegram.messenger"
